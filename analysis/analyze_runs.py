@@ -7,7 +7,8 @@
 输出：
     1. 每套设备的记录数、推力效率（g/W）、最高温度
     2. 功率–转速、推力–转速的对数拟合指数（理论约 3 和 2）
-    3. analysis/out/thrust_vs_power.png
+    3. 预测检验：预测值和实测值的偏差
+    4. analysis/out/thrust_vs_power.png
 """
 
 import argparse
@@ -22,8 +23,9 @@ import matplotlib.pyplot as plt  # noqa: E402
 
 NUMERIC = [
     "throttle_pct", "voltage_v", "i_batt_a", "i_motor_a", "rpm", "thrust_kg",
-    "t_motor_c", "t_esc_c", "t_water_c",
+    "t_motor_c", "t_esc_c", "t_water_c", "pred_power_w", "pred_thrust_kg",
 ]
+DEV_LIMIT = 20  # 预测偏差在 ±20% 以内算「准」，和记录页一致
 # 图上用英文标签，避免系统缺中文字体时显示方块
 DEVICE_LABELS = {"square": "Scheme 1 (square-wave)", "vesc": "Scheme 2 (VESC FOC)"}
 DEVICE_NAMES_CN = {"square": "方案一 方波", "vesc": "方案二 VESC"}
@@ -45,7 +47,27 @@ def load(path: Path) -> pd.DataFrame:
     # 重新计算，不依赖导出时的取整
     df["power_w"] = df["voltage_v"] * df["i_batt_a"]
     df["g_per_w"] = df["thrust_kg"] * 1000 / df["power_w"].where(df["power_w"] > 0)
+    df["power_dev_pct"] = (df["power_w"] - df["pred_power_w"]) / df["pred_power_w"].where(df["pred_power_w"] != 0) * 100
+    df["thrust_dev_pct"] = (df["thrust_kg"] - df["pred_thrust_kg"]) / df["pred_thrust_kg"].where(df["pred_thrust_kg"] != 0) * 100
     return df
+
+
+def print_predictions(df: pd.DataFrame) -> None:
+    """三层检验的第二层：预测准不准。"""
+    devs = pd.concat([df["power_dev_pct"], df["thrust_dev_pct"]]).dropna()
+    print("\n== 预测检验 ==")
+    if devs.empty:
+        print("  还没有带预测值的记录。实验前在记录页填「预测功率」「预测推力」。")
+        return
+    hits = (devs.abs() <= DEV_LIMIT).sum()
+    print(f"  命中 {hits} / {len(devs)}（偏差在 ±{DEV_LIMIT}% 以内），平均绝对偏差 {devs.abs().mean():.1f}%")
+    cols = ["date", "experiment", "device", "power_dev_pct", "thrust_dev_pct"]
+    misses = df[(df["power_dev_pct"].abs() > DEV_LIMIT) | (df["thrust_dev_pct"].abs() > DEV_LIMIT)]
+    if not misses.empty:
+        print("  偏差大的记录（找出原因，写进备注）：")
+        for _, r in misses[cols].iterrows():
+            print(f"    {r['date']} {r['experiment']} {DEVICE_NAMES_CN.get(r['device'], r['device'])}"
+                  f"  功率偏差 {fmt(r['power_dev_pct'])}%  推力偏差 {fmt(r['thrust_dev_pct'])}%")
 
 
 def fit_exponent(df: pd.DataFrame, y: str, x: str = "rpm"):
@@ -134,6 +156,7 @@ def main() -> None:
         return
 
     print_summary(df)
+    print_predictions(df)
     if plot(df, args.out, f" · {args.exp.upper()}" if args.exp else ""):
         print(f"\n图已保存：{args.out}")
     else:
