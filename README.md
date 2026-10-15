@@ -1,21 +1,24 @@
 # thruster-lab
 
-72V 浆板/水下推进器的实验仓库：配置、原始数据、分析脚本、接线图都放在这里，用 git 管版本。
+72V 浆板/水下推进器的学习与实验仓库。配置、原始数据、分析脚本、接线图都放在这里，用 Git 管版本。
 
-学习路线和每章验收在 Claude 文档「72V 水上推进器 · 系统学习路线」里，日常的每次测试记录在「推进器实验记录」页面里。这个仓库放进度、知识地图和各种文件。
+这是从 Claude 项目迁移到 ChatGPT/Codex 的版本。完整课程路线已经存为 [docs/learning-route.md](docs/learning-route.md)，实验记录页面是可本地运行的 [tools/experiment-log.html](tools/experiment-log.html)。原始 Claude 导出件保存在 `archive/claude/`，供核对。
 
 ## 学习机制
 
-想学的时候在 Claude 里说「开始学习」或「继续」，从上次停下的地方接着讲。
+在 ChatGPT/Codex 项目里说「开始学习」或「继续」，助手先读进度和错题，再从上次停下的地方接着讲。项目说明见 [CHATGPT_PROJECT_INSTRUCTIONS.md](CHATGPT_PROJECT_INSTRUCTIONS.md)。
 
 - **进度：** [PROGRESS.md](PROGRESS.md)
 - **知识地图：** [knowledge/map.md](knowledge/map.md)，阶段零 9 课底层原理 + 「会发生什么」情景题 + 错题回炉
 - **规则：** [docs/learning-loop.md](docs/learning-loop.md)
+- **GitHub 同步：** [docs/github-sync.md](docs/github-sync.md)，两边共用进度、笔记和配置；Claude 入口见 [CLAUDE.md](CLAUDE.md)。
 
 ## 目录
 
 ```
 PROGRESS.md        当前进度、安全底线、学习日志
+AGENTS.md          Codex 项目工作说明
+CHATGPT_PROJECT_INSTRUCTIONS.md   ChatGPT 项目指令
 knowledge/
   map.md           知识地图、情景题库、错题回炉
 configs/
@@ -27,9 +30,13 @@ data/
 analysis/
   analyze_runs.py  读取导出的 CSV，对比两套设备，拟合立方律
 docs/
+  learning-route.md 完整课程路线与验收
   learning-loop.md 学习机制的规则
   wiring/          两套方案的配电图、信号接线图
   notes.md         设备档案、失控保护实测、问题清单
+tools/
+  experiment-log.html  本地实验记录页面，支持 CSV 导入/导出
+archive/claude/       Claude 原始导出件
 ```
 
 ## 文件命名
@@ -40,7 +47,11 @@ docs/
 - 原始日志：`data/raw/2026-10-12_E3.1_vesc_tank.csv`
 - 导出记录：`data/runs/thruster-runs-20261012.csv`（页面导出的默认名，直接放进来）
 
-## 分析脚本
+## 实验记录和分析
+
+用浏览器打开 `tools/experiment-log.html`。记录保存在当前浏览器；每次实验后导出 CSV 放进 `data/runs/`，它才是可备份、可分析的正式数据。换浏览器或电脑时可把 CSV 导入页面。迁移时 Claude 页面显示 **0 条真实记录**；示例卡片不是实测数据。
+
+分析脚本读取同样的 CSV 格式：
 
 ```bash
 pip install pandas numpy matplotlib
